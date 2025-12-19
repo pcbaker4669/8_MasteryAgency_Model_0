@@ -25,6 +25,17 @@ class Params:
     teacher_skill_mean: float = 0.80
     teacher_skill_sd: float = 0.10
 
+    # Disruption model (new in V1)
+    inc_c0: float = -2.2  # baseline (lower = fewer incidents)
+    inc_c_class: float = 0.03  # effect of class size
+    inc_c_B: float = 1.0  # effect of student behavior propensity
+
+    base_loss: float = 0.03  # fraction of day lost per incident
+    max_loss: float = 0.35  # cap on time lost per class per day
+
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))
+
 
 def init_population(p: Params):
     # Create a repeatable random-number generator;
@@ -42,7 +53,10 @@ def init_population(p: Params):
     # tiny clip to ensure no teacher is exactly zero
     eps = 1e-6
     skill = np.clip(skill, eps, 1-eps)
-    return rng, K, skill
+
+    # mean 2 / 5 = .4
+    B = rng.beta(2.0, 3.0, p.n_students)  # Student behavior propensity in [0,1]
+    return rng, K, B, skill
 
 def make_classes(rng, n_students: int, class_size_cap: int):
     # random shuffle of the student indices.
@@ -58,11 +72,13 @@ def make_classes(rng, n_students: int, class_size_cap: int):
     return classes
 
 def run(p: Params):
-    rng, K, skill = init_population(p)
+    rng, K, B, skill = init_population(p)
 
     history = []  # (day, K_mean, K_p10, K_p50, K_p90)
 
     for day in range(1, p.n_days + 1):
+        incidents_total = 0
+        time_lost_total = 0.0
         classes = make_classes(rng, p.n_students, p.class_size_cap)
 
         for c_idx, cls in enumerate(classes):
@@ -71,8 +87,22 @@ def run(p: Params):
 
             attention_per_student = p.teacher_time_budget / class_size
 
-            # Simple learning: more attention + more skilled teacher -> more growth
-            dK = (p.alpha * attention_per_student * skill[t] * (1.0 - K[cls])
+            # incidents create time loss for the whole class
+            # Probability a student causes an incident today
+            x = p.inc_c0 + p.inc_c_class * class_size + p.inc_c_B * B[cls]
+            p_inc = sigmoid(x)
+
+            incidents = rng.random(class_size) < p_inc
+            inc_count = int(incidents.sum())
+
+            time_loss = min(p.max_loss, p.base_loss * inc_count)
+            time_factor = 1.0 - time_loss  # remaining usable instruction time
+
+            incidents_total += inc_count
+            time_lost_total += time_loss * class_size  # student-weighted
+
+            # Learning is reduced when time is lost to disruption
+            dK = (p.alpha * (attention_per_student * time_factor) * skill[t] * (1.0 - K[cls])
                   - p.forgetting * K[cls])
 
             K[cls] = np.clip(K[cls] + dK, 0.0, 1.0)
@@ -83,6 +113,8 @@ def run(p: Params):
             float(np.quantile(K, 0.10)),
             float(np.quantile(K, 0.50)),
             float(np.quantile(K, 0.90)),
+            int(incidents_total),
+            float(time_lost_total / p.n_students),
         ))
 
     return history
