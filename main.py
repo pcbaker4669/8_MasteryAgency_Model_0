@@ -31,20 +31,26 @@ def init_population(p: Params):
     # using p.seed means the simulation runs the same way every time for the same settings.
     rng = np.random.default_rng(p.seed)
 
-    # Student mastery starts low-to-mid
+    # Student mastery starts low-to-mid, beta distributions are always between 0 and 1
+    # Mean is a / (a + b) or 2 / (2+3) = 2/5 = .4, with a "normalish" distribution
+    # variance = (a*b) / ((a+b)^2 * (a + b + 1)) and std = sqrt(variance)
     K = rng.beta(2.0, 3.0, p.n_students)
 
-    # Draw each teacher’s skill from a normal distribution (mean +/- spread) so teachers
-    # vary realistically instead of all being identical.  "skill" have array or teacher skills
-    skill = rng.normal(p.teacher_skill_mean, p.teacher_skill_sd, p.n_teachers)
-    # skill = clip to [0.1, 1.0] so nobody is "zero"
-    skill = np.clip(skill, 0.1, 1.0)
+    # Draw each teacher’s skill from a normal-ish distribution with mean .8
+    # "skill" has an array or teacher skills (0, 1]
+    skill = rng.beta(16, 4, p.n_teachers)  # mean = 16/(20)=0.80, fairly tight
+    # tiny clip to ensure no teacher is exactly zero
+    eps = 1e-6
+    skill = np.clip(skill, eps, 1-eps)
     return rng, K, skill
 
 def make_classes(rng, n_students: int, class_size_cap: int):
     # random shuffle of the student indices.
     # If n_students = 5, something like: array([3, 0, 4, 1, 2])
     order = rng.permutation(n_students)
+
+    # "classes" becomes a list of arrays; each array holds the student IDs assigned
+    # to one class for today (up to class_size_cap students per class).
     classes = []
     for i in range(0, n_students, class_size_cap):
         classes.append(order[i:i+class_size_cap])
