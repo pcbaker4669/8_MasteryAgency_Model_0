@@ -1,16 +1,35 @@
-# This is a sample Python script.
+from dataclasses import dataclass
+import numpy as np
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+@dataclass
+class Params:
+    # population
+    n_students: int = 120
+    n_teachers: int = 6
+
+    # policy lever
+    class_size_cap: int = 30
+
+    # Teacher resources
+    teacher_time_budget: float = 30.0 # attention units per teacher per day
+
+    # Learning dynamics
+    alpha: float = 0.05  # Learning rate scale
+    forgetting: float = 0.002  # daily forgetting proportional to K
+
+    # Run controls
+    n_days: int = 60
+    seed: int = 1
+
+    # Teacher skill distribution
+    teacher_skill_mean: float = 0.80
+    teacher_skill_sd: float = 0.10
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def init_popuation(p: Params):
+    rng = np.random.default_rng(p.seed)
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+
