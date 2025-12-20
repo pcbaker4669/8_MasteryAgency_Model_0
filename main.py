@@ -1,52 +1,24 @@
+# todo: I believe students with high agency will not be apt to lose agency
+#       I believe students that don't do well will lose agency
+#       Although, prehaps agency should be mostly effected by incidents, I've
+#       seen where students with good agency lose agency in a choatic environment
+
+
 from dataclasses import dataclass
+from dataclasses import replace
+from dataclasses import asdict
+from collections import defaultdict
+
 import numpy as np
 import csv
+import os
+
+import plot_run_summaries
+import plot_run_summaries as my_plots
 
 # for analysis and error checking
 # https://chatgpt.com/c/6945a0a5-b57c-8328-aaec-b7c5cfef2879
 
-def write_history_csv(filename: str, history):
-    # Writes one row per day so you can plot time series and compute summary stats later
-    with open(filename, "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow([
-            "day",
-            "K_mean", "K_p10", "K_p50", "K_p90",
-            "A_mean", "A_p10", "A_p50", "A_p90",
-            "incidents_total",
-            "time_lost_mean",
-        ])
-        for row in history:
-            w.writerow(row)
-
-def summarize_daily_csv(filename: str):
-    rows = []
-    with open(filename, "r", newline="", encoding="utf-8") as f:
-        r = csv.DictReader(f)
-        for row in r:
-            # convert numeric fields
-            rows.append({
-                "day": int(row["day"]),
-                "K_mean": float(row["K_mean"]),
-                "K_p10": float(row["K_p10"]),
-                "A_mean": float(row["A_mean"]),
-                "A_p10": float(row["A_p10"]),
-                "incidents_total": int(row["incidents_total"]),
-                "time_lost_mean": float(row["time_lost_mean"]),
-            })
-
-    first = rows[0]
-    last = rows[-1]
-
-    incidents_avg = sum(x["incidents_total"] for x in rows) / len(rows)
-    time_lost_avg = sum(x["time_lost_mean"] for x in rows) / len(rows)
-
-    print("Rows:", len(rows))
-    print(f"Start: K_mean={first['K_mean']:.3f}, A_mean={first['A_mean']:.3f}")
-    print(f"End:   K_mean={last['K_mean']:.3f}, K_p10={last['K_p10']:.3f}, "
-          f"A_mean={last['A_mean']:.3f}, A_p10={last['A_p10']:.3f}")
-    print(f"Avg incidents/day: {incidents_avg:.2f}")
-    print(f"Avg time lost/day: {time_lost_avg:.3f}")
 
 @dataclass
 class Params:
@@ -87,6 +59,146 @@ class Params:
     beta_success: float = 0.010     # how much A increases on success
     gamma_failure: float = 0.006    # how much A decreases on failure
     success_eps: float = 1e-6       # what counts as "success" in dK
+
+# this is for the daily_all_runs.csv file
+OUTPUT_NAMES = [
+    "K_mean", "K_p10", "K_p50", "K_p90",
+    "A_mean", "A_p10", "A_p50", "A_p90",
+    "incidents_total",
+    "time_lost_mean",
+]
+
+def append_history_csv(filename: str, p: Params, history, run_id: int = 1):
+    p_dict = asdict(p)
+    param_names = list(p_dict.keys())
+
+    header = ["day", "run_id"] + param_names + OUTPUT_NAMES
+
+    file_exists = False
+    try:
+        with open(filename, "r", encoding="utf-8") as _:
+            file_exists = True
+    except FileNotFoundError:
+        file_exists = False
+
+    with open(filename, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+
+        # write header once
+        if not file_exists:
+            w.writerow(header)
+
+        # append rows
+        for row in history:
+            day = row[0]
+            outputs = list(row[1:])
+            params = [p_dict[name] for name in param_names]
+            w.writerow([day, run_id] + params + outputs)
+
+# this is for the summary file
+OUTPUT_COLS = [
+    "K_mean", "K_p10", "K_p50", "K_p90",
+    "A_mean", "A_p10", "A_p50", "A_p90",
+    "incidents_total",
+    "time_lost_mean",
+]
+
+
+def summarize_daily_all_runs(infile: str, outfile: str):
+    runs_params = {}                 # run_id -> dict of param columns (strings)
+    runs_rows = defaultdict(list)    # run_id -> list of parsed daily rows
+
+    with open(infile, "r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        header = reader.fieldnames or []
+
+        if "day" not in header or "run_id" not in header:
+            raise ValueError("Expected columns 'day' and 'run_id' in daily_all_runs.csv")
+
+        # Input params are everything except day, run_id, and known outputs
+        param_cols = [c for c in header if c not in (["day", "run_id"] + OUTPUT_COLS)]
+
+        for row in reader:
+            run_id = int(row["run_id"])
+            day = int(row["day"])
+
+            # Store params once per run (from first encountered row)
+            if run_id not in runs_params:
+                runs_params[run_id] = {c: row[c] for c in param_cols}
+
+            # Parse outputs we’ll summarize
+            runs_rows[run_id].append({
+                "day": day,
+                "K_mean": float(row["K_mean"]),
+                "K_p10": float(row["K_p10"]),
+                "K_p50": float(row["K_p50"]),
+                "K_p90": float(row["K_p90"]),
+                "A_mean": float(row["A_mean"]),
+                "A_p10": float(row["A_p10"]),
+                "A_p50": float(row["A_p50"]),
+                "A_p90": float(row["A_p90"]),
+                "incidents_total": int(row["incidents_total"]),
+                "time_lost_mean": float(row["time_lost_mean"]),
+            })
+
+    # Define summary columns (one row per run)
+    summary_cols = [
+        "n_days",
+        "K_mean_start", "A_mean_start",
+        "K_mean_end", "K_p10_end", "K_p50_end", "K_p90_end",
+        "A_mean_end", "A_p10_end", "A_p50_end", "A_p90_end",
+        "K_mean_gain", "A_mean_gain",
+        "incidents_avg_per_day", "incidents_total",
+        "time_lost_avg", "time_lost_max",
+    ]
+
+    out_header = ["run_id"] + param_cols + summary_cols
+
+    with open(outfile, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=out_header)
+        writer.writeheader()
+
+        for run_id in sorted(runs_rows.keys()):
+            rows = sorted(runs_rows[run_id], key=lambda r: r["day"])
+            first = rows[0]
+            last = rows[-1]
+
+            n_days = len(rows)
+            incidents_total = sum(r["incidents_total"] for r in rows)
+            incidents_avg = incidents_total / n_days
+            time_lost_avg = sum(r["time_lost_mean"] for r in rows) / n_days
+            time_lost_max = max(r["time_lost_mean"] for r in rows)
+
+            summary = {
+                "run_id": run_id,
+                **runs_params.get(run_id, {}),
+
+                "n_days": n_days,
+
+                "K_mean_start": first["K_mean"],
+                "A_mean_start": first["A_mean"],
+
+                "K_mean_end": last["K_mean"],
+                "K_p10_end": last["K_p10"],
+                "K_p50_end": last["K_p50"],
+                "K_p90_end": last["K_p90"],
+
+                "A_mean_end": last["A_mean"],
+                "A_p10_end": last["A_p10"],
+                "A_p50_end": last["A_p50"],
+                "A_p90_end": last["A_p90"],
+
+                "K_mean_gain": last["K_mean"] - first["K_mean"],
+                "A_mean_gain": last["A_mean"] - first["A_mean"],
+
+                "incidents_avg_per_day": incidents_avg,
+                "incidents_total": incidents_total,
+
+                "time_lost_avg": time_lost_avg,
+                "time_lost_max": time_lost_max,
+            }
+
+            writer.writerow(summary)
 
 # Converts any real-valued score into a probability between 0 and 1
 # (useful for incident likelihood).
@@ -197,14 +309,35 @@ def run(p: Params):
 
 
 if __name__ == "__main__":
-    p = Params()
-    hist = run(p)
+    base = Params()
+    out_file = "daily_all_runs.csv"
+    # optional: start fresh each time by deleting the old file
+    # (comment out if you want to keep appending)
+    if os.path.exists(out_file):
+        os.remove(out_file)
 
-    write_history_csv("daily.csv", hist)
+        # Define scenarios (10 runs). Change these however you like.
+    scenarios = [
+        {"class_size_cap": 12 },
+        {"class_size_cap": 14 },
+        {"class_size_cap": 16 },
+        {"class_size_cap": 18 },
+        {"class_size_cap": 20 },
+        {"class_size_cap": 22 },
+        {"class_size_cap": 24 },
+        {"class_size_cap": 26 },
+        {"class_size_cap": 28 },
+        {"class_size_cap": 30 },
+    ]
 
-    last = hist[-1]
-    print("Done.")
-    summarize_daily_csv("daily.csv")
+    for run_id, overrides in enumerate(scenarios, start=1):
+        p = replace(base, **overrides)  # <-- override ANY params here
+        hist = run(p)
+        append_history_csv(out_file, p, hist, run_id=run_id)
+
+    summarize_daily_all_runs("daily_all_runs.csv", "run_summaries.csv")
+    print("Wrote run_summaries.csv")
+    plot_run_summaries.run_plots()
 
 
 
