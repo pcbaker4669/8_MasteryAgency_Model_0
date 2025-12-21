@@ -1,21 +1,24 @@
-# todo: This model is run with middle school in mind (in the U.S.)
+# Notes: This model is run with middle school in mind (in the U.S.)
 #  There should be an association between agency and environment (incidents), I've
 #  seen where students with good agency lose agency in a chaotic environment
 #  I believe students with high agency will not be apt to lose agency
 #  I believe students that don't do well will lose agency
 #  Currently, agency nudges up on successes and down on failures, probably too simplistic
 
+# todo: fig2 is showing maxed agency, which is not realistic
+# still strange cutoff errors
+
 from dataclasses import dataclass
 from dataclasses import replace
 from dataclasses import asdict
 from collections import defaultdict
+import statistics as stats
 
 import numpy as np
 import csv
 import os
 
 import plot_run_summaries
-import plot_run_summaries as my_plots
 
 # for analysis and error checking
 # https://chatgpt.com/c/6945a0a5-b57c-8328-aaec-b7c5cfef2879
@@ -332,39 +335,80 @@ def run(p: Params):
 
     return history
 
+def aggregate_run_summaries_by_cap(infile: str, outfile: str):
+    """
+    Collapse run_summaries.csv (one row per run) into scenario_summary.csv
+    (one row per class_size_cap) with mean/sd across replications.
+    """
+    rows = []
+    with open(infile, "r", newline="", encoding="utf-8") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            rows.append(row)
+
+    # group rows by class_size_cap
+    groups = defaultdict(list)
+    for row in rows:
+        cap = int(float(row["class_size_cap"]))
+        groups[cap].append(row)
+
+    # metrics that exist in your run_summaries.csv
+    metrics = [
+        "K_mean_end", "K_p10_end", "K_p50_end", "K_p90_end",
+        "A_mean_end", "A_p10_end", "A_p50_end", "A_p90_end",
+        "K_mean_gain", "A_mean_gain",
+        "incidents_avg_per_day",
+        "time_lost_avg", "time_lost_max",
+    ]
+
+    out_header = ["class_size_cap", "n_reps"]
+    for m in metrics:
+        out_header += [f"{m}_mean", f"{m}_sd"]
+
+    with open(outfile, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=out_header)
+        w.writeheader()
+
+        for cap in sorted(groups.keys()):
+            g = groups[cap]
+            out = {"class_size_cap": cap, "n_reps": len(g)}
+
+            for m in metrics:
+                vals = [float(r[m]) for r in g if r.get(m, "") != ""]
+                out[f"{m}_mean"] = stats.mean(vals) if vals else ""
+                out[f"{m}_sd"] = (stats.stdev(vals) if len(vals) >= 2 else 0.0) if vals else ""
+
+            w.writerow(out)
+
 
 if __name__ == "__main__":
     base = Params()
     out_file = "daily_all_runs.csv"
-    # optional: start fresh each time by deleting the old file
-    # (comment out if you want to keep appending)
-    if os.path.exists(out_file):
-        os.remove(out_file)
 
-        # Define scenarios (10 runs). Change these however you like.
-    scenarios = [
-        {"class_size_cap": 12 },
-        {"class_size_cap": 14 },
-        {"class_size_cap": 16 },
-        {"class_size_cap": 18 },
-        {"class_size_cap": 20 },
-        {"class_size_cap": 22 },
-        {"class_size_cap": 24 },
-        {"class_size_cap": 26 },
-        {"class_size_cap": 28 },
-        {"class_size_cap": 30 },
-    ]
+    # start fresh each time
+    for fn in (out_file, "run_summaries.csv", "scenario_summary.csv"):
+        if os.path.exists(fn):
+            os.remove(fn)
 
-    for run_id, overrides in enumerate(scenarios, start=1):
-        p = replace(base, **overrides)  # <-- override ANY params here
-        hist = run(p)
-        append_history_csv(out_file, p, hist, run_id=run_id)
+    caps = [12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+    n_reps = 10
+
+    run_id = 0
+    for cap in caps:
+        for rep in range(n_reps):
+            run_id += 1
+
+            # unique seed per (cap, rep) so each replication differs
+            seed = base.seed + cap * 1000 + rep
+
+            p = replace(base, class_size_cap=cap, seed=seed)
+            hist = run(p)
+            append_history_csv(out_file, p, hist, run_id=run_id)
 
     summarize_daily_all_runs("daily_all_runs.csv", "run_summaries.csv")
     print("Wrote run_summaries.csv")
+
+    aggregate_run_summaries_by_cap("run_summaries.csv", "scenario_summary.csv")
+    print("Wrote scenario_summary.csv")
+
     plot_run_summaries.run_plots()
-
-
-
-
-
