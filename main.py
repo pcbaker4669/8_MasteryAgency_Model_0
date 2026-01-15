@@ -1,4 +1,5 @@
 
+import json
 from analysis import (
     make_table1,
     plot_lorenz_from_model,
@@ -12,11 +13,9 @@ from analysis import (
 # ----------------------------
 def main():
     # multiple runs with different seeds
-    base_params = dict(
-        n_students=300, n_days=90, class_size=30,
-        risk_mu=-0.78, risk_sigma=1.6, nb_k=0.5,
-        inc_base_rate=0.24, at_risk_top_n=3
-    )
+    with open("config.json", "r") as f:
+        base_params = json.load(f)
+
     # replicate_summaries(base_params)
     make_table1(base_params, seeds=range(1, 51), out_csv="table1_baseline.csv")
     # Figure 1: Lorenz curve (student concentration)
