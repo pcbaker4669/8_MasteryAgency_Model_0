@@ -1,9 +1,17 @@
-"""Core model components for the classroom disruption generator."""
+"""Core model components for the classroom disruption generator.
+
+Inputs: a Params instance (seed, student count, class size, rates, and days).
+Outputs: history (daily totals), class_day_records (per-class/day rows),
+students (per-student totals), and a summary dict of aggregate metrics.
+Public API: Params, Student, Model, simulate; summary keys are stable outputs.
+Basic use: call simulate(params) for a one-shot run or Model(params).run().
+"""
 
 from dataclasses import dataclass
 import numpy as np
 import math
 
+# public API for from module import *
 __all__ = ["Params", "Student", "Model", "simulate"]
 
 # ----------------------------
@@ -194,6 +202,6 @@ def simulate(params: Params) -> dict:
     return {
         "history": m.history,
         "class_day_records": m.class_day_records,
-        "students": m.students,
+        "students": m.student_table(),
         "summary": m.summary(),
     }

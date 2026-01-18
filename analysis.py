@@ -230,7 +230,7 @@ def plot_lorenz_from_model(
     for sd in seeds:
         p = Params(**{**base_params, "seed": sd})
         out = simulate(p)
-        totals = np.array([s.incidents_total for s in out["students"]], dtype=float)
+        totals = np.array([s["incidents_total"] for s in out["students"]], dtype=float)
 
         pooled_totals.append(totals)
         top5_shares.append(share_top(totals, 0.05))
@@ -358,10 +358,13 @@ def plot_ccdf_class_counts(
     ax.set_xlim(0, xmax)
 
     # Now set y-limits based on what you're actually plotting
-    ymin = y_plot.min()
-    y_floor = 10 ** np.floor(np.log10(ymin))  # nice decade floor (e.g., 1e-3)
-    ax.set_ylim(y_floor, 1.0)
-    ax.set_yscale("log")
+    if use_log_y:
+        ymin = y_plot.min()
+        y_floor = 10 ** np.floor(np.log10(ymin))  # nice decade floor (e.g., 1e-3)
+        ax.set_ylim(y_floor, 1.0)
+        ax.set_yscale("log")
+    else:
+        ax.set_ylim(0.0, 1.0)
 
     ax.set_title("Class-Period Incident Counts (CCDF)")
     ax.set_xlabel("Incidents per class-period")
