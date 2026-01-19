@@ -1,66 +1,31 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18148012.svg)](https://doi.org/10.5281/zenodo.18148012)
 
+# An Agent-Based Disruption Generator for Classrooms (Lognormal Risk + Gamma–Poisson Counts)
 
-# An Agent-Based Disruption Generator for Classrooms Using Lognormal Risk and Gamma–Poisson Counts
-
-This repository contains the reference implementation for the disruption-only agent-based model (ABM) used in the paper:
+Reference implementation for the disruption-only agent-based model (ABM) used in the paper:
 
 **An Agent-Based Disruption Generator for Classrooms Using Lognormal Risk and Gamma–Poisson Counts**  
 Peter C. Baker (George Mason University)
 
-## Overview
+## What this model does
 
-The model simulates classroom disruption incidents as **event counts** in fixed **90-minute class periods**. Each student is an agent with a stable, latent disruption propensity (“risk”) drawn from a **lognormal distribution**, representing persistent between-student heterogeneity. For each class period, incidents are generated as counts using a **Gamma–Poisson mixture**, producing **overdispersed** (bursty) period totals with occasional spikes.
+The model generates **incident counts** for a classroom setting with fixed rosters. Each student is an agent with a stable latent disruption propensity (“risk”) drawn from a **lognormal distribution** (between-student heterogeneity). For each class session (represented here as one **class-day record**), incidents are generated using a **Gamma–Poisson mixture**, producing **overdispersed** (bursty) totals with occasional spikes.
 
-The model is intended as a **reusable core module** that can be integrated into larger classroom ABMs (e.g., models of instructional time loss, learning dynamics, and intervention experiments).
+This repository is designed as a **reusable core generator** that can be embedded into larger classroom ABMs (instructional time loss, learning dynamics, interventions, etc.).
 
-## Incident Definition (Measurement)
+## Incident definition (measurement)
 
-**Incident:** one discrete rule-violation (norm-violation) event observed during a **single 90-minute class period**, counted as a frequency measure.  
+**Incident:** one discrete rule-/norm-violation event counted within a single observation window (a “class-period” or “class session”).  
+In this implementation, the simulation time step is labeled as **day**, and the main record is **one row per class per day** (`class_day_records`). If your empirical study uses a different observation window (e.g., 45 vs 90 minutes), treat the simulated “day” as *one observation window* and calibrate rates accordingly.
+
 Incidents are **not severity-weighted** in this implementation.
 
-## Key Outputs (Paper Artifacts)
+## Repository layout
 
-The code produces:
-
-- **Table 1**: baseline summary metrics (mean ± SD across replications)
-- **Figure 1**: Lorenz curve of incidents across students (concentration)
-- **Figure 2**: CCDF of class-period incident counts (tail/spikes)
-- Tail probabilities: \(P(X \ge 10)\), \(P(X \ge 20)\), \(P(X \ge 30)\)
-
-Optional (robustness / sensitivity):
-- **Figure 3**: concentration vs risk dispersion (`risk_sigma`)
-- **Figure 4**: overdispersion vs burstiness (`nb_k`)
-- **Figure 5**: incident level vs baseline rate (`inc_base_rate`)
-
-## Model Structure
-
-- **Params** (dataclass): model configuration and parameters
-- **Student**: agent with a stable latent `risk` and accumulated `incidents_total`
-- **Model**:
-  - initializes student risks (lognormal)
-  - partitions students into fixed class rosters
-  - simulates class periods over `n_days`
-  - records class-period counts and summary metrics
-
-## Parameters (Baseline)
-
-Baseline configuration used in the paper:
-
-- `n_students = 300`
-- `class_size = 30` (10 fixed classes)
-- `n_days = 90` (90 class periods)
-- `risk_mu = -0.78`
-- `risk_sigma = 1.6`  *(controls concentration across students)*
-- `nb_k = 0.5`  *(controls burstiness / overdispersion via Gamma–Poisson mixture)*
-- `inc_base_rate = 0.24`  *(controls overall incident level)*
-- `at_risk_top_n = 3` *(defines the “at-risk” subgroup per class as top-N risk students)*
-
-### Parameter roles (short)
-
-- **`inc_base_rate`**: sets the overall level of incidents (mean incidents per class period)
-- **`risk_sigma`**: increases/decreases concentration (higher values → more unequal incident contribution)
-- **`nb_k`**: controls burstiness/overdispersion (lower values → heavier tails and more spikes)
+- `model_core.py` — core ABM components: `Params`, `Student`, `Model`, `simulate()`  
+- `analysis.py` — analysis + plotting utilities used to produce paper artifacts  
+- `main.py` — orchestration script that reads `config.json`, runs replications, and saves tables/figures  
+- `README.md` — this file
 
 ## Requirements
 
@@ -74,56 +39,126 @@ Install dependencies:
 pip install numpy matplotlib
 ```
 
-## Running the Model
+## Quickstart
 
-Run the main script (your file may be named `model.py` or `main.py`):
+### 1) Create a `config.json`
+
+`main.py` reads a JSON config file from the project root. Two optional keys control output folders:
+
+- `figures_dir` (default: `"figures"`)
+- `data_dir` (default: `"data"`)
+
+All other keys are passed into `Params(...)`.
+
+Example `config.json` (paper-style baseline):
+
+```json
+{
+  "seed": 1,
+  "n_students": 300,
+  "class_size": 30,
+  "n_days": 90,
+
+  "risk_mu": -0.78,
+  "risk_sigma": 1.6,
+  "nb_k": 0.5,
+  "inc_base_rate": 0.24,
+  "at_risk_top_n": 3,
+
+  "figures_dir": "figures",
+  "data_dir": "data"
+}
+```
+
+### 2) Run the paper artifacts
 
 ```bash
-python model.py
-# or
 python main.py
 ```
 
-By default, the script is set up to:
-1. Generate **Table 1** summary CSVs
-2. Save **Figure 1** (Lorenz curve) as PNG + PDF
-3. Save **Figure 2** (CCDF) as PNG + PDF
-4. Print tail probabilities for class-period incident counts
+By default, `main.py` runs **50 replications** (`seed=1..50`) and produces:
+
+- **Table 1** (baseline summary metrics, mean ± SD across replications)
+- **Figure 1** (Lorenz curve: concentration of incidents across students)
+- **Figure 2** (CCDF: tail / spikes in class-session incident counts)
+- Tail probabilities printed to console: `P(X >= 10)`, `P(X >= 20)`, `P(X >= 30)`
+
+It also runs one-factor-at-a-time (OFAT) sensitivity sweeps (Figures 3–5).
 
 ### Output files
 
-Typical outputs in the project directory:
+With the default folder names, outputs are written to:
 
-- `table1_baseline.csv` (mean ± SD across replications)
-- `table1_baseline_per_run.csv` (per-seed metrics)
-- `fig1_lorenz_concentration.png` / `.pdf`
-- `fig2_ccdf_class_counts.png` / `.pdf`
+- `data/table1_baseline.csv` (mean ± SD across seeds)
+- `data/table1_baseline_per_run.csv` (per-seed summaries)
+- `figures/fig1_lorenz_concentration.png` and `.pdf`
+- `figures/fig2_ccdf_class_counts.png` and `.pdf`
+- `figures/fig3_sweep_risk_sigma_top5.png` and `.pdf`
+- `figures/fig4_sweep_nb_k_varmean.png` and `.pdf`
+- `figures/fig5_sweep_inc_base_rate_level.png` and `.pdf`
 
-Optional robustness figures (if enabled):
-- `fig3_sweep_risk_sigma_top5.png` / `.pdf`
-- `fig4_sweep_nb_k_varmean.png` / `.pdf`
-- `fig5_sweep_inc_base_rate_level.png` / `.pdf`
+## Using the generator programmatically
+
+```python
+from model_core import Params, simulate
+
+p = Params(
+    seed=1,
+    n_students=300,
+    class_size=30,
+    n_days=90,
+    risk_mu=-0.78,
+    risk_sigma=1.6,
+    nb_k=0.5,
+    inc_base_rate=0.24,
+    at_risk_top_n=3,
+)
+
+out = simulate(p)
+
+# Core outputs
+history = out["history"]                      # one row per day (overall totals)
+class_day_records = out["class_day_records"]  # one row per class per day
+students = out["students"]                    # per-student totals + metadata
+summary = out["summary"]                      # aggregate metrics (stable keys)
+```
+
+## Model structure (core)
+
+- **Params** (dataclass): configuration and parameters  
+- **Student**: agent with stable latent `risk` and accumulated `incidents_total`  
+- **Model**:
+  - draws student risks (lognormal)
+  - partitions students into fixed class rosters
+  - simulates `n_days` time steps
+  - records one count per class per day and computes summary metrics
+
+## Parameters and interpretation
+
+Key parameters (see `Params` in `model_core.py`):
+
+- **`inc_base_rate`**: sets overall incident level (scales expected counts linearly)
+- **`risk_sigma`**: controls concentration/inequality across students (higher values → more unequal contribution)
+- **`nb_k`**: controls burstiness/overdispersion (lower values → heavier tails and more spikes)
+- **`risk_mu`**: shifts overall system load via the lognormal mean (often calibrated jointly with `inc_base_rate`)
+- **`at_risk_top_n`**: defines an “at-risk” subgroup within each class as the top‑N risk students (fixed for a run)
+
+Notes:
+- `model_core.py` defines defaults for all parameters; `config.json` is the intended way to set paper baselines and calibration targets.
+- In `Model.step_day`, each student’s expected rate is `inc_base_rate * risk`, and counts are generated via a Gamma–Poisson mixture.
 
 ## Reproducibility
 
-The model uses NumPy’s RNG (`numpy.random.default_rng`) seeded per replication (`seed = 1..50` by default).  
-All reported baseline metrics in the paper are generated by running **50 replications** and summarizing results as mean ± SD across seeds.
-
-## Notes on Interpretation
-
-- The model produces incident counts under an explicit **measurement protocol** (discrete rule-violation events counted within 90-minute periods).
-- Different empirical studies may use different observation schemes or coding definitions. When comparing to literature, align the observation window and incident definition as closely as possible.
+The model uses NumPy’s RNG (`numpy.random.default_rng`) seeded per replication.  
+Baseline statistics in the paper are generated by running **multiple seeds** (default: 50) and summarizing outputs as mean ± SD across replications.
 
 ## Citation
 
-If you use this code, please cite the accompanying paper:
+If you use this code, please cite the software record (and the paper, if/when published):
 
-## Citation
-Baker, P. C. (2026). *An Agent-Based Disruption Generator for Classrooms Using Lognormal Risk and Gamma–Poisson Counts* (Version vX.Y.Z) [Software]. Zenodo. https://doi.org/10.5281/zenodo.18148012
-
-
+Baker, P. C. (2026). *An Agent-Based Disruption Generator for Classrooms Using Lognormal Risk and Gamma–Poisson Counts* (Version v1.0.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.18148012
 
 ## License
 
-Choose a license before publishing (common choices: MIT, BSD-3, or Apache-2.0).  
+Add a license before wider distribution (common choices: MIT, BSD-3, Apache-2.0).  
 If you do not include a license, others technically cannot reuse the code.
