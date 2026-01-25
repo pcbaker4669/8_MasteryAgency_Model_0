@@ -258,19 +258,29 @@ def plot_lorenz_from_model(
     fig = plt.figure(figsize=(6.5, 5.0))
     ax = plt.gca()
 
-    ax.plot(x, y, label="Lorenz curve (pooled student totals)")
-    ax.plot([0, 1], [0, 1], linestyle="--", label="Equality line")
+    ax.plot(x, y, label="Lorenz curve\n(pooled student totals)")
+    ax.plot([0, 1], [0, 1], linestyle="--", label="_nolegend_")
 
     ax.set_title("Concentration of Incidents Across Students (Lorenz Curve)")
     ax.set_xlabel("Cumulative share of students")
     ax.set_ylabel("Cumulative share of incidents")
 
     txt = (
-        f"Pooled over {len(seeds)} runs (N={len(pooled_totals)} student-runs)\n"
+        f"Pooled over {len(seeds)} runs\n(N={len(pooled_totals)} student-runs)\n\n"
         f"Gini = {gini:.3f}\n"
-        f"Mean top 5% share = {top5_mean:.3f}; mean top 1% share = {top1_mean:.3f}"
+        f"Mean top 5% share = {top5_mean:.3f}\nmean top 1% share = {top1_mean:.3f}"
     )
-    ax.text(0.05, 0.80, txt, transform=ax.transAxes)
+    ax.text(0.05, 0.7, txt, transform=ax.transAxes)
+    ax.text(
+        0.5, 0.53,
+        "Equality line",
+        transform=ax.transAxes,
+        rotation=36,
+        rotation_mode="anchor",
+        ha="center",
+        va="center",
+        fontsize=10,
+    )
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)

@@ -32,6 +32,9 @@ class Params:
     # 0.24 -> class_mean ~ 10, 0.36 -> class_mean ~ .15
     inc_base_rate: float = 0.02   # baseline expected incidents per student per day (before modifiers)
 
+    # nb_k is the shape parameter (k) that forces the model to follow a Negative Binomial 
+    # (nb) distribution, thereby producing the specific "burstiness" required to match 
+    # empirical classroom data.
     nb_k: float = 0.5           # dispersion; smaller => heavier tail, (originally 1)
                                 # .5 - moderate burstiness
                                 # .2 - strong burstiness
