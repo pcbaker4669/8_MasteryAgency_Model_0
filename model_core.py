@@ -88,7 +88,6 @@ class Model:
         self.history = []             # one row per day (overall totals)
         self.class_day_records = []   # one row per class per day (literature-aligned)
 
-
     def _init_students(self):
         # Latent disruption risk (positive, heavy-tailed)
         risk = self.rng.lognormal(mean=self.p.risk_mu, sigma=self.p.risk_sigma, size=self.p.n_students)
@@ -113,9 +112,13 @@ class Model:
                 lam = self.p.inc_base_rate * s.risk
 
                 k = max(self.p.nb_k, 1e-12)
+                # Draw a latent incident rate lam_tilde from a Gamma distribution to model 
+                # unobserved day-to-day volatility (so the rate itself can fluctuate).
                 lam_tilde = self.rng.gamma(shape=k, scale=lam / k if lam > 0 else 0.0)
+                # Draw the realized incident count k_i from a Poisson distribution using 
+                # lam_tilde as the rate, turning that fluctuating rate into actual bursty counts.
+                # Poisson distribution predicts the probability of k events occurring within that interval
                 k_i = int(self.rng.poisson(lam_tilde))
-
                 s.incidents_total += k_i
                 class_total += k_i
                 total_incidents_today += k_i

@@ -5,10 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3e2dcfa0-70bf-45c9-8ea6-ee9c8ebecbd2" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/8_MasteryAgency_Model_0.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/8_MasteryAgency_Model_0.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fig1_lorenz_concentration.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/fig1_lorenz_concentration.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/table1_baseline.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/table1_baseline_per_run.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig1_lorenz_concentration.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig1_lorenz_concentration.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig2_ccdf_class_counts.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig2_ccdf_class_counts.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig3_sweep_risk_sigma_top5.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig3_sweep_risk_sigma_top5.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig4_sweep_nb_k_varmean.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig4_sweep_nb_k_varmean.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig5_sweep_inc_base_rate_level.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/figures/fig5_sweep_inc_base_rate_level.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model_core.py" beforeDir="false" afterPath="$PROJECT_DIR$/model_core.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -41,7 +54,7 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "ai.playground.ignore.import.keys.banner.in.settings": "true",
-    "git-widget-placeholder": "v4__visualization",
+    "git-widget-placeholder": "main",
     "last_opened_file_path": "C:/Users/peter/OneDrive/Documents/GMU/Dissertation/code/8_MasteryAgency_Model_0",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -67,6 +80,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
@@ -80,7 +94,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-af26db0dccfe-c546a90a8094-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-242.26775.22" />
+        <option value="bundled-python-sdk-f2b7a9f6281b-6e1f45a539f7-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.29346.142" />
       </set>
     </attachedChunks>
   </component>
@@ -94,6 +108,7 @@
       <updated>1766175484907</updated>
       <workItem from="1766516797148" duration="209000" />
       <workItem from="1766517509246" duration="16116000" />
+      <workItem from="1770123438415" duration="51000" />
     </task>
     <servers />
   </component>

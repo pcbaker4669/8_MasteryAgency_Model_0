@@ -45,7 +45,7 @@ def main():
         seeds=range(1, 51),
         out_png=os.path.join(figures_dir, "fig2_ccdf_class_counts.png"),
         out_pdf=os.path.join(figures_dir, "fig2_ccdf_class_counts.pdf"),
-        use_log_y=True,
+        use_log_y=False,
     )
 
     tail_probabilities_class_counts(model_params, seeds=range(1, 51), thresholds=(10, 20, 30))
